@@ -99,7 +99,10 @@ function fmtSize(bytes) {
 
 function potplayerUrl(absPath) {
   if (!absPath) return "";
-  return "potplayer://" + absPath;
+  // Windows 反斜杠转正斜杠，中文/空格经 encodeURI 编码，
+  // 与浏览器地址栏手输 potplayer:// 成功跳转的格式一致。
+  const normalized = absPath.replace(/\\/g, "/");
+  return "potplayer://" + encodeURI(normalized);
 }
 
 // 图片字段在 meta/<演员>.json 中以演员目录为基准存放，
