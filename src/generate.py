@@ -76,7 +76,10 @@ def parse_detail(html: str, fanha: str) -> dict:
     title = title_tag.get_text(strip=True) if title_tag else ""
 
     def text_after(div_id: str) -> str:
-        node = soup.select_one(f"div#{div_id} td.text")
+        # 文本可能在 td.text 直接，也可能在外层 td 内包的 span.text（javlibrary 实际结构）
+        node = soup.select_one(f"div#{div_id} td.text") or soup.select_one(
+            f"div#{div_id} td .text"
+        )
         return node.get_text(strip=True) if node else ""
 
     release_date = text_after("video_date")
