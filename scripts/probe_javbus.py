@@ -62,7 +62,9 @@ def main() -> int:
                 print(f"[PARSE] info 行: {line}")
 
     # 内容截图
-    screenshots = [img.get("src") for img in soup.select("#sample-waterfall img, .screencap img")]
+    screenshots = [
+        img.get("src") for img in soup.select("#sample-waterfall img, .screencap img")
+    ]
     print(f"[PARSE] 截图数量: {len(screenshots)}")
     for s in screenshots[:5]:
         print(f"  - {s}")

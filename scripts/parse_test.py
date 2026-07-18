@@ -32,7 +32,11 @@ def parse(html: str) -> dict:
             key = header.get_text(strip=True)
             if "識別碼" in key:
                 spans = p.select("span")
-                fanha = spans[-1].get_text(strip=True) if len(spans) > 1 else p.get_text(strip=True).replace(key, "").strip()
+                fanha = (
+                    spans[-1].get_text(strip=True)
+                    if len(spans) > 1
+                    else p.get_text(strip=True).replace(key, "").strip()
+                )
             elif "發行日期" in key:
                 release_date = p.get_text(strip=True).replace(key, "").strip()
 
@@ -47,7 +51,11 @@ def parse(html: str) -> dict:
         actress = star.get("title") or star.get_text(strip=True)
 
     # 内容截图：#sample-waterfall a.sample-box 的 href
-    screenshots = [a["href"] for a in soup.select("#sample-waterfall a.sample-box") if a.get("href")]
+    screenshots = [
+        a["href"]
+        for a in soup.select("#sample-waterfall a.sample-box")
+        if a.get("href")
+    ]
 
     return {
         "title": title,

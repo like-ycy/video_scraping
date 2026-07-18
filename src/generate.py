@@ -75,7 +75,9 @@ def parse_detail(html: str, fanha: str) -> dict:
     cover = cover_tag["href"] if cover_tag and cover_tag.get("href") else None
 
     screenshots = [
-        a["href"] for a in soup.select("#sample-waterfall a.sample-box") if a.get("href")
+        a["href"]
+        for a in soup.select("#sample-waterfall a.sample-box")
+        if a.get("href")
     ]
 
     return {
@@ -144,7 +146,11 @@ def scrape_actress(actor_dir: Path) -> dict | None:
     out = actor_dir / f"{actor_dir.name}.json"
     out.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[OK] 写入 {out} ({len(videos)} 个视频)")
-    return {"name": actor_dir.name, "json": f"{actor_dir.name}/{actor_dir.name}.json", "video_count": len(videos)}
+    return {
+        "name": actor_dir.name,
+        "json": f"{actor_dir.name}/{actor_dir.name}.json",
+        "video_count": len(videos),
+    }
 
 
 def export_html(videos_dir: Path) -> None:
@@ -161,7 +167,9 @@ def export_html(videos_dir: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="从 javbus 刮削视频元数据并生成 JSON/预览页")
+    parser = argparse.ArgumentParser(
+        description="从 javbus 刮削视频元数据并生成 JSON/预览页"
+    )
     parser.add_argument(
         "--dir",
         required=True,
