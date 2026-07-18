@@ -7,6 +7,7 @@ requires-python = ">=3.14"
 dependencies = [
     "beautifulsoup4>=4.15.0",
     "httpx>=0.28.1",
+    "seleniumbase>=4.51.2",
 ]
 
 [[tool.uv.index]]

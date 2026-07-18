@@ -20,59 +20,91 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from urllib.parse import urljoin
-
 import httpx
 from bs4 import BeautifulSoup
+from seleniumbase import BaseCase, SB
 
-BASE_URL = "https://www.javbus.com"
+SITE = "https://www.javlibrary.com"
+SEARCH_URL = f"{SITE}/cn/vl_searchbyid.php?keyword="
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_HTML = ROOT / "src" / "index.html"
 
 
-def fetch_html(url: str) -> str | None:
+def fetch_html(sb: BaseCase, url: str) -> str | None:
     try:
-        resp = httpx.get(url, follow_redirects=True, timeout=20)
-    except httpx.HTTPError as exc:
-        print(f"[ERROR] 无法连接 javbus ({url}): {exc}")
+        sb.activate_cdp_mode(url)
+        sb.sleep(5)
+        sb.solve_captcha()
+        sb.sleep(8)
+        sb.solve_captcha()
+        sb.sleep(3)
+        try:
+            sb.click('input[value="我同意"]', timeout=6)
+            sb.sleep(3)
+        except Exception:
+            pass
+        return sb.get_page_source()
+    except Exception as exc:
+        print(f"[ERROR] 无法加载页面 ({url}): {exc}")
         return None
-    if resp.status_code != 200:
-        print(f"  [WARN] 非 200 ({resp.status_code}): {url}")
+
+
+def search_detail_url(sb: BaseCase, fanha: str) -> str | None:
+    html = fetch_html(sb, SEARCH_URL + fanha.lower())
+    if not html:
         return None
-    return resp.text
+    soup = BeautifulSoup(html, "html.parser")
+    link = soup.select_one('a[href*="/cn/jav"]')
+    if not link:
+        print(f"  [ERROR] 搜索结果未找到详情链接: {fanha}")
+        return None
+    href = str(link.get("href", ""))
+    if not href:
+        print(f"  [ERROR] 搜索结果链接为空: {fanha}")
+        return None
+    return SITE + href
 
 
 def parse_detail(html: str, fanha: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
 
-    title_tag = soup.select_one("h3")
+    title_tag = soup.select_one("#video_title h3 a")
     title = title_tag.get_text(strip=True) if title_tag else ""
 
-    info = soup.select_one(".col-md-3.info")
-    release_date = None
-    if info:
-        for p in info.select("p"):
-            header = p.select_one(".header")
-            if not header:
-                continue
-            key = header.get_text(strip=True)
-            if "發行日期" in key or "发行日期" in key:
-                release_date = p.get_text(strip=True).replace(key, "").strip()
+    def text_after(div_id: str) -> str:
+        node = soup.select_one(f"div#{div_id} td.text")
+        return node.get_text(strip=True) if node else ""
 
-    cover_tag = soup.select_one("a.bigImage")
-    cover = cover_tag["href"] if cover_tag and cover_tag.get("href") else None
+    release_date = text_after("video_date")
+    length = text_after("video_length").replace("分钟", "").strip()
 
-    screenshots = [
-        a["href"]
-        for a in soup.select("#sample-waterfall a.sample-box")
-        if a.get("href")
+    genres = [a.get_text(strip=True) for a in soup.select("#video_genres .genre a")]
+    cast = [
+        a.get_text(strip=True)
+        for a in soup.select("#video_cast span.cast span.star a")
     ]
+
+    cover_tag = soup.select_one("#video_jacket img#video_jacket_img")
+    cover = str(cover_tag.get("src", "")) if cover_tag else ""
+    if cover.startswith("//"):
+        cover = "https:" + cover
+
+    screenshots = []
+    for img in soup.select("div.previewthumbs img"):
+        src = str(img.get("src", ""))
+        if src.startswith("//"):
+            src = "https:" + src
+        if src:
+            screenshots.append(src)
 
     return {
         "fanha": fanha,
         "title": title,
         "release_date": release_date,
+        "length": length,
+        "genres": genres,
+        "cast": cast,
         "cover": cover,
         "screenshots": screenshots,
     }
@@ -96,35 +128,38 @@ def download(url: str, dest: Path) -> bool:
 
 def scrape_actress(actor_dir: Path) -> dict | None:
     videos = []
-    for mp4 in sorted(actor_dir.glob("*.mp4")):
-        fanha = mp4.stem
-        print(f"[INFO] 刮削 {actor_dir.name}/{fanha}")
+    with SB(uc=True, test=True, locale="en", headless=True) as sb:
+        for mp4 in sorted(actor_dir.glob("*.mp4")):
+            fanha = mp4.stem
+            print(f"[INFO] 刮削 {actor_dir.name}/{fanha}")
 
-        html = fetch_html(f"{BASE_URL}/{fanha}")
-        if not html:
-            continue
-        data = parse_detail(html, fanha)
+            detail_url = search_detail_url(sb, fanha)
+            if not detail_url:
+                continue
+            html = fetch_html(sb, detail_url)
+            if not html:
+                continue
+            data = parse_detail(html, fanha)
 
-        if not data["title"] or not data["cover"]:
-            print(f"  [ERROR] 解析不到数据（标题/封面缺失），跳过 {fanha}")
-            continue
+            if not data["title"] or not data["cover"]:
+                print(f"  [ERROR] 解析不到数据（标题/封面缺失），跳过 {fanha}")
+                continue
 
-        cover_rel = f"covers/{fanha}.jpg"
-        if data["cover"]:
-            cover_url = urljoin(BASE_URL, data["cover"])
-            download(cover_url, actor_dir / cover_rel)
-        data["cover"] = cover_rel
+            cover_rel = f"covers/{fanha}.jpg"
+            if data["cover"]:
+                download(data["cover"], actor_dir / cover_rel)
+            data["cover"] = cover_rel
 
-        shot_rels = []
-        for i, shot in enumerate(data["screenshots"], 1):
-            rel = f"images/{fanha}_{i}.jpg"
-            if download(shot, actor_dir / rel):
-                shot_rels.append(rel)
-        data["screenshots"] = shot_rels
+            shot_rels = []
+            for i, shot in enumerate(data["screenshots"], 1):
+                rel = f"images/{fanha}_{i}.jpg"
+                if download(shot, actor_dir / rel):
+                    shot_rels.append(rel)
+            data["screenshots"] = shot_rels
 
-        data["video_file"] = mp4.name
-        data["file_size"] = mp4.stat().st_size
-        videos.append(data)
+            data["video_file"] = mp4.name
+            data["file_size"] = mp4.stat().st_size
+            videos.append(data)
 
     if not videos:
         return None
