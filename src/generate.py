@@ -81,8 +81,7 @@ def parse_detail(html: str, fanha: str) -> dict:
 
     genres = [a.get_text(strip=True) for a in soup.select("#video_genres .genre a")]
     cast = [
-        a.get_text(strip=True)
-        for a in soup.select("#video_cast span.cast span.star a")
+        a.get_text(strip=True) for a in soup.select("#video_cast span.cast span.star a")
     ]
 
     cover_tag = soup.select_one("#video_jacket img#video_jacket_img")
@@ -230,14 +229,11 @@ def update_preview_bat(videos_dir: Path) -> None:
     if not bat.exists():
         return
     text = bat.read_text(encoding="utf-8")
-    text = text.replace(
-        'set PYTHON_EXE=', f'set PYTHON_EXE={sys.executable}'
-    ).replace(
-        'set VIDEOS_DIR=%~dp0videos',
-        f'set VIDEOS_DIR={videos_dir.resolve()}',
-    )
+    # 只写入 python 解释器路径；视频目录用 bat 内 %~dp0 自适应，
+    # 避免把中文绝对路径写死进 bat 导致 cmd 编码解析错误。
+    text = text.replace("set PYTHON_EXE=", f"set PYTHON_EXE={sys.executable}")
     bat.write_text(text, encoding="utf-8")
-    print(f"[OK] 已更新预览脚本 {bat} 的 python 路径与视频目录")
+    print(f"[OK] 已更新预览脚本 {bat} 的 python 路径")
 
 
 if __name__ == "__main__":
