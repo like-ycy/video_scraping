@@ -87,7 +87,6 @@
 <script>
 let index = { actresses: [] };
 let current = null;
-const ROOT = "__ROOT__";
 let currentActorDir = "";
 
 function fmtSize(bytes) {
@@ -98,10 +97,9 @@ function fmtSize(bytes) {
   return n.toFixed(1) + " " + u[i];
 }
 
-function potplayerUrl(relPath) {
-  if (!ROOT || !relPath) return "";
-  const abs = (ROOT + "\\" + relPath).replace(/\//g, "\\");
-  return "potplayer://" + abs;
+function potplayerUrl(absPath) {
+  if (!absPath) return "";
+  return "potplayer://" + absPath;
 }
 
 // 图片字段在 meta/<演员>.json 中以演员目录为基准存放，
@@ -172,8 +170,7 @@ function openDetail(idx) {
   const shots = (v.screenshots || []).map((s, i) =>
     `<img src="${imgUrl(s)}" alt="截图 ${i + 1}" loading="lazy" onclick="openLightbox(${idx}, ${i})" onerror="this.style.visibility='hidden'">`
   ).join("");
-  const rel = currentActorDir ? currentActorDir + "/" + v.video_file : v.video_file;
-  const playUrl = potplayerUrl(rel);
+  const playUrl = potplayerUrl(v.video_path);
   const playBtn = playUrl
     ? `<button type="button" class="play-btn" onclick="location.href='${playUrl}'">▶ 用 PotPlayer 播放</button>`
     : "";

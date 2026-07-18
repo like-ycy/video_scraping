@@ -164,6 +164,9 @@ def scrape_actress(actor_dir: Path) -> dict | None:
             data["screenshots"] = shot_rels
 
             data["video_file"] = mp4.name
+            # 播放用绝对路径，前端直接 potplayer:// + 该字段，避免 ROOT/目录拼接错误。
+            # PotPlayer 在 Windows 上需要反斜杠路径，故转回反斜杠。
+            data["video_path"] = str(mp4.resolve()).replace("/", "\\")
             data["file_size"] = mp4.stat().st_size
             videos.append(data)
 
