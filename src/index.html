@@ -97,11 +97,11 @@ function fmtSize(bytes) {
   return n.toFixed(1) + " " + u[i];
 }
 
-function potplayerUrl(absPath) {
+function videoUrl(absPath) {
   if (!absPath) return "";
-  // 反斜杠转正斜杠，中文原样保留。PotPlayer 认原样中文路径
-  // （命令行 start 验证通过），不认 %XX 编码。
-  return "potplayer://" + absPath.replace(/\\/g, "/");
+  // 浏览器内直接播放本地文件：file:/// + 正斜杠绝对路径，
+  // 中文经 encodeURI 编码（与地址栏手输成功格式 file:///D:/%E8... 一致）。
+  return "file:///" + encodeURI(absPath.replace(/\\/g, "/"));
 }
 
 // 图片字段在 meta/<演员>.json 中以演员目录为基准存放，
@@ -172,9 +172,9 @@ function openDetail(idx) {
   const shots = (v.screenshots || []).map((s, i) =>
     `<img src="${imgUrl(s)}" alt="截图 ${i + 1}" loading="lazy" onclick="openLightbox(${idx}, ${i})" onerror="this.style.visibility='hidden'">`
   ).join("");
-  const playUrl = potplayerUrl(v.video_path);
+  const playUrl = videoUrl(v.video_path);
   const playBtn = playUrl
-    ? `<button type="button" class="play-btn" id="playBtn">▶ 用 PotPlayer 播放</button>`
+    ? `<a class="play-btn" id="playBtn" href="${playUrl}" target="_blank" rel="noopener">▶ 在浏览器播放</a>`
     : "";
   inner.innerHTML = `
     <img class="cover" src="${imgUrl(v.cover)}" alt="${v.fanha} 封面大图" onerror="this.style.visibility='hidden'">
@@ -189,19 +189,6 @@ function openDetail(idx) {
     ${playBtn}
     <div class="shots">${shots}</div>`;
   document.getElementById("overlay").classList.add("show");
-  const pb = document.getElementById("playBtn");
-  if (pb) pb.addEventListener("click", () => launchPotPlayer(playUrl));
-}
-
-function launchPotPlayer(url) {
-  // 在用户手势栈内动态创建 <a> 并 click，浏览器按 potplayer:// 协议
-  // 处理且不拦截（与地址栏手输行为一致）。href 用原样中文路径，
-  // PotPlayer 自身不解码 %XX，故不可 encodeURI。
-  const a = document.createElement("a");
-  a.href = url;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
 }
 
 let lbList = [];
