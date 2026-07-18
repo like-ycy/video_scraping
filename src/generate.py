@@ -4,6 +4,7 @@
     <dir>/
         index.json              总索引（演员列表 + 各演员汇总 json 路径）
         index.html              预览页（ROOT 已由本脚本写入绝对路径）
+        preview.bat             预览启动器（由本脚本复制并填入 python 路径）
         演员名称/
             meta/
                 演员名称.json       该演员汇总：videos 数组
@@ -223,20 +224,23 @@ def main() -> int:
     print(f"[OK] 写入总索引 {index_path} ({len(index_entries)} 个演员)")
 
     export_html(videos_dir)
-    update_preview_bat(videos_dir)
+    copy_preview_bat(videos_dir)
     return 0
 
 
-def update_preview_bat(videos_dir: Path) -> None:
-    bat = ROOT / "启动预览.bat"
-    if not bat.exists():
+def copy_preview_bat(videos_dir: Path) -> None:
+    src = ROOT / "preview.bat"
+    if not src.exists():
+        print(f"[WARN] 预览脚本缺失，跳过复制: {src}")
         return
-    text = bat.read_text(encoding="utf-8")
-    # 只写入 python 解释器路径；视频目录用 bat 内 %~dp0 自适应，
-    # 避免把中文绝对路径写死进 bat 导致 cmd 编码解析错误。
+    # 复制模板到视频目录，并写入本机 python 解释器路径；
+    # 视频目录由 bat 内 %~dp0 自适应，避免把中文绝对路径写死进 bat。
+    # 仓库模板保持 PYTHON_EXE 留空（走 uv），仅外部分区副本填实机路径。
+    text = src.read_text(encoding="utf-8")
     text = text.replace("set PYTHON_EXE=", f"set PYTHON_EXE={sys.executable}")
-    bat.write_text(text, encoding="utf-8")
-    print(f"[OK] 已更新预览脚本 {bat} 的 python 路径")
+    dest = videos_dir / "preview.bat"
+    dest.write_text(text, encoding="utf-8")
+    print(f"[OK] 已复制预览脚本到 {dest}")
 
 
 if __name__ == "__main__":
