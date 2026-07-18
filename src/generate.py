@@ -11,7 +11,7 @@
             images/<番号>_N.jpg
 
 用法:
-    uv run python src/generate.py [--dir 视频根目录]
+    uv run python src/generate.py --dir <视频根目录>
 """
 
 from __future__ import annotations
@@ -33,7 +33,6 @@ UA = (
 COOKIES = {"age_verified": "1"}
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_VIDEOS_DIR = ROOT / "videos"
 TEMPLATE_HTML = ROOT / "src" / "index.html"
 
 
@@ -169,8 +168,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="从 javbus 刮削视频元数据并生成 JSON/预览页")
     parser.add_argument(
         "--dir",
-        default=str(DEFAULT_VIDEOS_DIR),
-        help="视频根目录（默认: 项目下 videos/）",
+        required=True,
+        help="视频根目录（必填）",
     )
     args = parser.parse_args()
 
