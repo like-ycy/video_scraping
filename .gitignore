@@ -77,3 +77,6 @@ deploy/
 .mimocode
 .cortexkit/
 videos/
+
+# SeleniumBase driver download temp
+downloaded_files/
