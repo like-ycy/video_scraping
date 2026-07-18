@@ -14,7 +14,7 @@
   .tab { padding: 8px 16px; background: #2a2a34; border-radius: 20px; cursor: pointer; font-size: 14px; transition: .15s; }
   .tab:hover { background: #353541; }
   .tab.active { background: #d94f8a; color: #fff; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 20px; }
   .card { background: #1f1f27; border-radius: 8px; overflow: hidden; cursor: pointer; transition: .15s; }
   .card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.4); }
   .card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: #2a2a34; }
@@ -25,7 +25,7 @@
   .empty { color: #888; padding: 40px; text-align: center; }
   .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 100; overflow-y: auto; }
   .overlay.show { display: block; }
-  .overlay-inner { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+  .overlay-inner { max-width: 1500px; margin: 40px auto; padding: 0 20px; }
   .overlay-close {
     position: fixed; top: 20px; right: 24px; z-index: 110;
     width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
@@ -34,12 +34,12 @@
     transition: background .15s, transform .15s;
   }
   .overlay-close:hover { background: rgba(255,255,255,.28); transform: rotate(90deg); }
-  .overlay img.cover { width: 100%; max-width: 500px; display: block; margin: 0 auto 16px; border-radius: 8px; }
+  .overlay img.cover { width: 100%; max-width: 1080px; display: block; margin: 0 auto 16px; border-radius: 8px; }
   .detail-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
   .detail-row { font-size: 13px; color: #bbb; margin: 4px 0; }
   .play-btn { margin: 12px 0; padding: 10px 20px; background: #d94f8a; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
   .play-btn:hover { background: #e85f9a; }
-  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
   .shots img { width: 100%; border-radius: 6px; cursor: pointer; }
   .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.95); z-index: 200; align-items: center; justify-content: center; }
   .lightbox.show { display: flex; }
