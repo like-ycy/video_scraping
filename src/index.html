@@ -205,9 +205,7 @@ function startPlay(el) {
   video.controls = true;
   video.autoplay = true;
   video.className = "player-video";
-  video.addEventListener("click", (e) => e.stopPropagation());
   el.replaceWith(video);
-  video.play().catch(() => {});
 }
 
 let lbList = [];
