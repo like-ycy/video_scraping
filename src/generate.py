@@ -1,4 +1,4 @@
-"""从 javbus 刮削视频根目录下各演员目录的元数据与图片，生成 JSON 与预览页。
+"""从 javlibrary 刮削视频根目录下各演员目录的元数据与图片，生成 JSON 与预览页。
 
 布局约定:
     <dir>/
@@ -11,7 +11,7 @@
             images/<番号>_N.jpg
 
 用法:
-    uv run python src/generate.py --dir <视频根目录>
+    python src/generate.py --dir <视频根目录>
 """
 
 from __future__ import annotations
@@ -220,7 +220,23 @@ def main() -> int:
     print(f"[OK] 写入总索引 {index_path} ({len(index_entries)} 个演员)")
 
     export_html(videos_dir)
+    update_preview_bat(videos_dir)
     return 0
+
+
+def update_preview_bat(videos_dir: Path) -> None:
+    bat = ROOT / "启动预览.bat"
+    if not bat.exists():
+        return
+    text = bat.read_text(encoding="utf-8")
+    text = text.replace(
+        'set PYTHON_EXE=', f'set PYTHON_EXE={sys.executable}'
+    ).replace(
+        'set VIDEOS_DIR=%~dp0videos',
+        f'set VIDEOS_DIR={videos_dir.resolve()}',
+    )
+    bat.write_text(text, encoding="utf-8")
+    print(f"[OK] 已更新预览脚本 {bat} 的 python 路径与视频目录")
 
 
 if __name__ == "__main__":
