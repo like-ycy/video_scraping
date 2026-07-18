@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>视频库预览</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #15151a; color: #e8e8ea; }
+  header { padding: 16px 24px; background: #1f1f27; border-bottom: 1px solid #2c2c36; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  .container { padding: 24px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .tab { padding: 8px 16px; background: #2a2a34; border-radius: 20px; cursor: pointer; font-size: 14px; transition: .15s; }
+  .tab:hover { background: #353541; }
+  .tab.active { background: #d94f8a; color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+  .card { background: #1f1f27; border-radius: 8px; overflow: hidden; cursor: pointer; transition: .15s; }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+  .card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #2a2a34; }
+  .card .meta { padding: 8px 10px; }
+  .card .fanha { font-size: 13px; font-weight: 600; color: #d94f8a; }
+  .card .title { font-size: 11px; color: #aaa; margin-top: 2px; line-height: 1.3; max-height: 2.6em; overflow: hidden; }
+  .card .sub { font-size: 11px; color: #888; margin-top: 4px; }
+  .empty { color: #888; padding: 40px; text-align: center; }
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 100; overflow-y: auto; }
+  .overlay.show { display: block; }
+  .overlay-inner { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+  .overlay-close { position: fixed; top: 20px; right: 24px; font-size: 30px; cursor: pointer; color: #fff; }
+  .overlay img.cover { width: 100%; max-width: 500px; display: block; margin: 0 auto 16px; border-radius: 8px; }
+  .detail-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .detail-row { font-size: 13px; color: #bbb; margin: 4px 0; }
+  .play-btn { margin: 12px 0; padding: 10px 20px; background: #d94f8a; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
+  .play-btn:hover { background: #e85f9a; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+  .shots img { width: 100%; border-radius: 6px; cursor: pointer; }
+  .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.95); z-index: 200; align-items: center; justify-content: center; }
+  .lightbox.show { display: flex; }
+  .lightbox img { max-width: 92vw; max-height: 92vh; }
+  .lightbox .nav { position: fixed; top: 50%; transform: translateY(-50%); font-size: 40px; color: #fff; cursor: pointer; user-select: none; padding: 20px; }
+  .lightbox .prev { left: 10px; }
+  .lightbox .next { right: 10px; }
+  .lightbox .lb-close { position: fixed; top: 20px; right: 24px; font-size: 30px; color: #fff; cursor: pointer; }
+</style>
+</head>
+<body>
+<header><h1>视频库预览</h1></header>
+<div class="container">
+  <div class="tabs" id="tabs"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none">没有数据。先运行刮削脚本生成 JSON。</div>
+</div>
+
+<div class="overlay" id="overlay">
+  <button type="button" class="overlay-close" aria-label="关闭" onclick="closeDetail()">&times;</button>
+  <div class="overlay-inner" id="overlayInner"></div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <button type="button" class="lb-close" aria-label="关闭" onclick="closeLightbox()">&times;</button>
+  <button type="button" class="nav prev" aria-label="上一张" onclick="lbMove(-1)">&#10094;</button>
+  <img id="lbImg" src="" alt="放大图">
+  <button type="button" class="nav next" aria-label="下一张" onclick="lbMove(1)">&#10095;</button>
+</div>
+
+<script>
+let index = { actresses: [] };
+let current = null;
+const ROOT = "__ROOT__";
+let currentActorDir = "";
+
+function fmtSize(bytes) {
+  if (!bytes) return "-";
+  const u = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0, n = bytes;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return n.toFixed(1) + " " + u[i];
+}
+
+function potplayerUrl(relPath) {
+  if (!ROOT || !relPath) return "";
+  const abs = (ROOT + "\\" + relPath).replace(/\//g, "\\");
+  return "potplayer://" + abs;
+}
+
+async function loadIndex() {
+  try {
+    const r = await fetch("index.json");
+    index = await r.json();
+  } catch (e) {
+    document.getElementById("empty").style.display = "block";
+    return;
+  }
+  renderTabs();
+  if (index.actresses.length) selectActress(0);
+  else document.getElementById("empty").style.display = "block";
+}
+
+function renderTabs() {
+  const tabs = document.getElementById("tabs");
+  tabs.innerHTML = "";
+  index.actresses.forEach((a, i) => {
+    const el = document.createElement("div");
+    el.className = "tab" + (i === 0 ? " active" : "");
+    el.textContent = `${a.name} (${a.video_count})`;
+    el.onclick = () => selectActress(i);
+    tabs.appendChild(el);
+  });
+}
+
+async function selectActress(i) {
+  document.querySelectorAll(".tab").forEach((t, j) => { t.classList.toggle("active", j === i); });
+  const a = index.actresses[i];
+  currentActorDir = a.json.includes("/") ? a.json.split("/").slice(0, -1).join("/") : "";
+  const r = await fetch(a.json);
+  const data = await r.json();
+  current = data.videos || [];
+  renderGrid(current);
+}
+
+function renderGrid(videos) {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  videos.forEach((v, idx) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <img src="${v.cover}" alt="${v.fanha} 封面" loading="lazy" onerror="this.style.visibility='hidden'">
+      <div class="meta">
+        <div class="fanha">${v.fanha}</div>
+        <div class="title">${v.title || ""}</div>
+        <div class="sub">${v.release_date || "-"} · ${fmtSize(v.file_size)}</div>
+      </div>`;
+    card.onclick = () => openDetail(idx);
+    grid.appendChild(card);
+  });
+}
+
+function openDetail(idx) {
+  const v = current[idx];
+  const inner = document.getElementById("overlayInner");
+  const shots = (v.screenshots || []).map((s, i) =>
+    `<img src="${s}" alt="截图 ${i + 1}" loading="lazy" onclick="openLightbox(${idx}, ${i})" onerror="this.style.visibility='hidden'">`
+  ).join("");
+  const rel = currentActorDir ? currentActorDir + "/" + v.video_file : v.video_file;
+  const playUrl = potplayerUrl(rel);
+  const playBtn = playUrl
+    ? `<button type="button" class="play-btn" onclick="location.href='${playUrl}'">▶ 用 PotPlayer 播放</button>`
+    : "";
+  inner.innerHTML = `
+    <img class="cover" src="${v.cover}" alt="${v.fanha} 封面大图" onerror="this.style.visibility='hidden'">
+    <div class="detail-title">${v.title || v.fanha}</div>
+    <div class="detail-row">番号：${v.fanha}</div>
+    <div class="detail-row">发布时间：${v.release_date || "-"}</div>
+    <div class="detail-row">文件名：${v.video_file || "-"}</div>
+    <div class="detail-row">文件大小：${fmtSize(v.file_size)}</div>
+    ${playBtn}
+    <div class="shots">${shots}</div>`;
+  document.getElementById("overlay").classList.add("show");
+}
+
+let lbList = [];
+let lbPos = 0;
+
+function openLightbox(vIdx, sIdx) {
+  lbList = current[vIdx].screenshots || [];
+  lbPos = sIdx;
+  showLb();
+  document.getElementById("lightbox").classList.add("show");
+}
+function showLb() {
+  document.getElementById("lbImg").src = lbList[lbPos] || "";
+}
+function lbMove(d) {
+  lbPos = (lbPos + d + lbList.length) % lbList.length;
+  showLb();
+}
+function closeLightbox() { document.getElementById("lightbox").classList.remove("show"); }
+function closeDetail() { document.getElementById("overlay").classList.remove("show"); }
+
+document.getElementById("lightbox").addEventListener("click", (e) => {
+  if (e.target.id === "lightbox") closeLightbox();
+});
+
+loadIndex();
+</script>
+</body>
+</html>

@@ -1,8 +1,9 @@
-"""从 javbus 刮削 videos/ 下各演员目录的视频元数据与图片，生成 JSON。
+"""从 javbus 刮削视频根目录下各演员目录的元数据与图片，生成 JSON 与预览页。
 
 布局约定:
-    videos/
+    <dir>/
         index.json              总索引（演员列表 + 各演员汇总 json 路径）
+        index.html              预览页（ROOT 已由本脚本写入绝对路径）
         演员名称/
             演员名称.json       该演员汇总：videos 数组
             <番号>.mp4
@@ -10,14 +11,13 @@
             images/<番号>_N.jpg
 
 用法:
-    uv run python src/generate.py
+    uv run python src/generate.py [--dir 视频根目录]
 """
 
 from __future__ import annotations
 
+import argparse
 import json
-import os
-import re
 import sys
 from pathlib import Path
 from urllib.parse import urljoin
@@ -33,7 +33,8 @@ UA = (
 COOKIES = {"age_verified": "1"}
 
 ROOT = Path(__file__).resolve().parent.parent
-VIDEOS_DIR = ROOT / "videos"
+DEFAULT_VIDEOS_DIR = ROOT / "videos"
+TEMPLATE_HTML = ROOT / "src" / "index.html"
 
 
 def extract_fanha(filename: str) -> str:
@@ -151,25 +152,49 @@ def scrape_actress(actor_dir: Path) -> dict | None:
     return {"name": actor_dir.name, "json": f"{actor_dir.name}/{actor_dir.name}.json", "video_count": len(videos)}
 
 
+def export_html(videos_dir: Path) -> None:
+    if not TEMPLATE_HTML.exists():
+        print(f"[WARN] 模板缺失，跳过 HTML 输出: {TEMPLATE_HTML}")
+        return
+    html = TEMPLATE_HTML.read_text(encoding="utf-8")
+    # ROOT 用正斜杠以外的反斜杠，且转义供 JS 字符串使用
+    root_js = str(videos_dir.resolve()).replace("\\", "\\\\")
+    html = html.replace("__ROOT__", root_js)
+    out = videos_dir / "index.html"
+    out.write_text(html, encoding="utf-8")
+    print(f"[OK] 写出预览页 {out}")
+
+
 def main() -> int:
-    if not VIDEOS_DIR.exists():
-        print(f"[ERROR] 找不到 videos 目录: {VIDEOS_DIR}")
+    parser = argparse.ArgumentParser(description="从 javbus 刮削视频元数据并生成 JSON/预览页")
+    parser.add_argument(
+        "--dir",
+        default=str(DEFAULT_VIDEOS_DIR),
+        help="视频根目录（默认: 项目下 videos/）",
+    )
+    args = parser.parse_args()
+
+    videos_dir = Path(args.dir)
+    if not videos_dir.exists():
+        print(f"[ERROR] 找不到目录: {videos_dir}")
         return 1
 
     index_entries = []
-    for actor_dir in sorted(p for p in VIDEOS_DIR.iterdir() if p.is_dir()):
+    for actor_dir in sorted(p for p in videos_dir.iterdir() if p.is_dir()):
         if not any(actor_dir.glob("*.mp4")):
             continue
         entry = scrape_actress(actor_dir)
         if entry:
             index_entries.append(entry)
 
-    index_path = VIDEOS_DIR / "index.json"
+    index_path = videos_dir / "index.json"
     index_path.write_text(
         json.dumps({"actresses": index_entries}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     print(f"[OK] 写入总索引 {index_path} ({len(index_entries)} 个演员)")
+
+    export_html(videos_dir)
     return 0
 
 

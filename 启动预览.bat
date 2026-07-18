@@ -3,9 +3,6 @@ set VIDEOS_DIR=%~dp0videos
 set PYTHON_EXE=
 set PORT=8000
 
-REM 将 videos 绝对路径写入 _config.json，供预览页拼本地 PotPlayer 路径
-powershell -NoProfile -Command "Set-Content -Path '%VIDEOS_DIR%\_config.json' -Value ('{''root'': ''' + (Resolve-Path '%VIDEOS_DIR%').Path.Replace('\','\\') + '''}') -Encoding UTF8"
-
 where uv >nul 2>&1 && set USE_UV=1
 if defined USE_UV (
     start "" http://localhost:%PORT%/index.html
