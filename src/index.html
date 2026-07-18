@@ -99,10 +99,9 @@ function fmtSize(bytes) {
 
 function potplayerUrl(absPath) {
   if (!absPath) return "";
-  // Windows 反斜杠转正斜杠，中文/空格经 encodeURI 编码，
-  // 与浏览器地址栏手输 potplayer:// 成功跳转的格式一致。
-  const normalized = absPath.replace(/\\/g, "/");
-  return "potplayer://" + encodeURI(normalized);
+  // Windows 反斜杠转正斜杠。中文必须原样保留——PotPlayer 不解码
+  // %XX，若 encodeURI 会把"迅雷下载"变成字面 %E8... 导致文件找不到。
+  return "potplayer://" + absPath.replace(/\\/g, "/");
 }
 
 // 图片字段在 meta/<演员>.json 中以演员目录为基准存放，
