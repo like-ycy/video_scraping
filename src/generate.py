@@ -50,8 +50,8 @@ def fetch_html(url: str) -> str | None:
             timeout=20,
         )
     except httpx.HTTPError as exc:
-        print(f"  [WARN] 请求失败 {url}: {exc}")
-        return None
+        print(f"[ERROR] 无法连接 javbus ({url}): {exc}")
+        sys.exit(1)
     if resp.status_code != 200:
         print(f"  [WARN] 非 200 ({resp.status_code}): {url}")
         return None
