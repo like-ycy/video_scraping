@@ -152,6 +152,9 @@ function openDetail(idx) {
     <div class="detail-title">${v.title || v.fanha}</div>
     <div class="detail-row">番号：${v.fanha}</div>
     <div class="detail-row">发布时间：${v.release_date || "-"}</div>
+    <div class="detail-row">长度：${v.length || "-"}</div>
+    <div class="detail-row">类别：${(v.genres || []).join("、") || "-"}</div>
+    <div class="detail-row">演员：${(v.cast || []).join("、") || "-"}</div>
     <div class="detail-row">文件名：${v.video_file || "-"}</div>
     <div class="detail-row">文件大小：${fmtSize(v.file_size)}</div>
     ${playBtn}
