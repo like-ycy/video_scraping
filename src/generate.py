@@ -26,11 +26,6 @@ import httpx
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.javbus.com"
-UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-)
-COOKIES = {"age_verified": "1"}
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_HTML = ROOT / "src" / "index.html"
@@ -38,16 +33,10 @@ TEMPLATE_HTML = ROOT / "src" / "index.html"
 
 def fetch_html(url: str) -> str | None:
     try:
-        resp = httpx.get(
-            url,
-            headers={"User-Agent": UA, "Referer": BASE_URL + "/"},
-            cookies=COOKIES,
-            follow_redirects=True,
-            timeout=20,
-        )
+        resp = httpx.get(url, follow_redirects=True, timeout=20)
     except httpx.HTTPError as exc:
         print(f"[ERROR] 无法连接 javbus ({url}): {exc}")
-        sys.exit(1)
+        return None
     if resp.status_code != 200:
         print(f"  [WARN] 非 200 ({resp.status_code}): {url}")
         return None
@@ -93,13 +82,7 @@ def download(url: str, dest: Path) -> bool:
     if dest.exists():
         return True
     try:
-        resp = httpx.get(
-            url,
-            headers={"User-Agent": UA, "Referer": BASE_URL + "/"},
-            cookies=COOKIES,
-            follow_redirects=True,
-            timeout=30,
-        )
+        resp = httpx.get(url, follow_redirects=True, timeout=30)
     except httpx.HTTPError as exc:
         print(f"  [WARN] 下载失败 {url}: {exc}")
         return False
@@ -121,6 +104,10 @@ def scrape_actress(actor_dir: Path) -> dict | None:
         if not html:
             continue
         data = parse_detail(html, fanha)
+
+        if not data["title"] or not data["cover"]:
+            print(f"  [ERROR] 解析不到数据（标题/封面缺失），跳过 {fanha}")
+            continue
 
         cover_rel = f"covers/{fanha}.jpg"
         if data["cover"]:
