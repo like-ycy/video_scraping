@@ -35,10 +35,16 @@
   }
   .overlay-close:hover { background: rgba(255,255,255,.28); transform: rotate(90deg); }
   .overlay img.cover { width: 100%; max-width: 1080px; display: block; margin: 0 auto 16px; border-radius: 8px; }
+  .player { position: relative; max-width: 1080px; margin: 0 auto 16px; cursor: pointer; }
+  .player img.cover { margin-bottom: 0; }
+  .play-mask {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 64px; color: #fff; background: rgba(0,0,0,.25); border-radius: 8px;
+    transition: background .15s;
+  }
+  .player:hover .play-mask { background: rgba(0,0,0,.45); }
   .detail-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
   .detail-row { font-size: 13px; color: #bbb; margin: 4px 0; }
-  .play-btn { display: inline-block; text-decoration: none; margin: 12px 0; padding: 10px 20px; background: #d94f8a; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
-  .play-btn:hover { background: #e85f9a; }
   .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
   .shots img { width: 100%; border-radius: 6px; cursor: pointer; }
   .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.95); z-index: 200; align-items: center; justify-content: center; }
@@ -95,13 +101,6 @@ function fmtSize(bytes) {
   let i = 0, n = bytes;
   while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
   return n.toFixed(1) + " " + u[i];
-}
-
-function videoUrl(absPath) {
-  if (!absPath) return "";
-  // 浏览器内直接播放本地文件：file:/// + 正斜杠绝对路径，
-  // 中文经 encodeURI 编码（与地址栏手输成功格式 file:///D:/%E8... 一致）。
-  return "file:///" + encodeURI(absPath.replace(/\\/g, "/"));
 }
 
 // 图片字段在 meta/<演员>.json 中以演员目录为基准存放，
@@ -172,12 +171,19 @@ function openDetail(idx) {
   const shots = (v.screenshots || []).map((s, i) =>
     `<img src="${imgUrl(s)}" alt="截图 ${i + 1}" loading="lazy" onclick="openLightbox(${idx}, ${i})" onerror="this.style.visibility='hidden'">`
   ).join("");
-  const playUrl = videoUrl(v.video_path);
-  const playBtn = playUrl
-    ? `<a class="play-btn" id="playBtn" href="${playUrl}" target="_blank" rel="noopener">▶ 在浏览器播放</a>`
+  // 视频相对 server 根（与封面图同机制）：演员目录/视频文件名。
+  // 默认显示封面图 + 播放遮罩，点击封面后原地替换为 <video> 播放。
+  const videoSrc = v.video_file
+    ? encodeURI((currentActorDir ? currentActorDir + "/" : "") + v.video_file)
     : "";
+  const player = videoSrc
+    ? `<div class="player" onclick="startPlay(this)" data-src="${videoSrc}">
+         <img class="cover" src="${imgUrl(v.cover)}" alt="${v.fanha} 封面大图" onerror="this.style.visibility='hidden'">
+         <div class="play-mask">▶</div>
+       </div>`
+    : `<img class="cover" src="${imgUrl(v.cover)}" alt="${v.fanha} 封面大图" onerror="this.style.visibility='hidden'">`;
   inner.innerHTML = `
-    <img class="cover" src="${imgUrl(v.cover)}" alt="${v.fanha} 封面大图" onerror="this.style.visibility='hidden'">
+    ${player}
     <div class="detail-title">${v.title || v.fanha}</div>
     <div class="detail-row">番号：${v.fanha}</div>
     <div class="detail-row">发布时间：${v.release_date || "-"}</div>
@@ -186,9 +192,20 @@ function openDetail(idx) {
     <div class="detail-row">演员：${(v.cast || []).join("、") || "-"}</div>
     <div class="detail-row">文件名：${v.video_file || "-"}</div>
     <div class="detail-row">文件大小：${fmtSize(v.file_size)}</div>
-    ${playBtn}
     <div class="shots">${shots}</div>`;
   document.getElementById("overlay").classList.add("show");
+}
+
+function startPlay(el) {
+  const src = el.getAttribute("data-src");
+  if (!src) return;
+  const video = document.createElement("video");
+  video.src = src;
+  video.controls = true;
+  video.autoplay = true;
+  video.className = "cover";
+  el.replaceWith(video);
+  video.play().catch(() => {});
 }
 
 let lbList = [];
