@@ -36,10 +36,6 @@ ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_HTML = ROOT / "src" / "index.html"
 
 
-def extract_fanha(filename: str) -> str:
-    return Path(filename).stem
-
-
 def fetch_html(url: str) -> str | None:
     try:
         resp = httpx.get(
@@ -116,7 +112,7 @@ def download(url: str, dest: Path) -> bool:
 def scrape_actress(actor_dir: Path) -> dict | None:
     videos = []
     for mp4 in sorted(actor_dir.glob("*.mp4")):
-        fanha = extract_fanha(mp4.name)
+        fanha = mp4.stem
         print(f"[INFO] 刮削 {actor_dir.name}/{fanha}")
 
         html = fetch_html(f"{BASE_URL}/{fanha}")
