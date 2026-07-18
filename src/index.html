@@ -225,7 +225,10 @@ function lbMove(d) {
   showLb();
 }
 function closeLightbox() { document.getElementById("lightbox").classList.remove("show"); }
-function closeDetail() { document.getElementById("overlay").classList.remove("show"); }
+function closeDetail() {
+  document.querySelectorAll("#overlay video").forEach((v) => { v.pause(); v.remove(); });
+  document.getElementById("overlay").classList.remove("show");
+}
 
 document.getElementById("lightbox").addEventListener("click", (e) => {
   if (e.target.id === "lightbox") closeLightbox();
