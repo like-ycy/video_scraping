@@ -32,6 +32,7 @@ SEARCH_URL = f"{SITE}/cn/vl_searchbyid.php?keyword="
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_HTML = ROOT / "src" / "index.html"
+PREVIEW_FILES = ("preview.bat", "preview_server.py")
 
 
 def fetch_html(sb: BaseCase, url: str) -> str | None:
@@ -230,23 +231,23 @@ def main() -> int:
     print(f"[OK] 写入总索引 {index_path} ({len(index_entries)} 个演员)")
 
     export_html(videos_dir)
-    copy_preview_bat(videos_dir)
+    copy_preview_files(videos_dir)
     return 0
 
 
-def copy_preview_bat(videos_dir: Path) -> None:
-    src = ROOT / "preview.bat"
-    if not src.exists():
-        print(f"[WARN] 预览脚本缺失，跳过复制: {src}")
-        return
-    # 复制模板到视频目录，并写入本机 python 解释器路径；
-    # 视频目录由 bat 内 %~dp0 自适应，避免把中文绝对路径写死进 bat。
-    # 仓库模板保持 PYTHON_EXE 留空（走 uv），仅外部分区副本填实机路径。
-    text = src.read_text(encoding="utf-8")
-    text = text.replace("set PYTHON_EXE=", f"set PYTHON_EXE={sys.executable}")
-    dest = videos_dir / "preview.bat"
-    dest.write_text(text, encoding="utf-8")
-    print(f"[OK] 已复制预览脚本到 {dest}")
+def copy_preview_files(videos_dir: Path) -> None:
+    for name in PREVIEW_FILES:
+        src = ROOT / name
+        if not src.exists():
+            print(f"[WARN] 预览脚本缺失，跳过复制: {src}")
+            continue
+        text = src.read_text(encoding="utf-8")
+        if name == "preview.bat":
+            # 视频目录由 bat 内 %~dp0 自适应，避免把中文绝对路径写死进 bat。
+            text = text.replace("set PYTHON_EXE=", f"set PYTHON_EXE={sys.executable}")
+        dest = videos_dir / name
+        dest.write_text(text, encoding="utf-8")
+        print(f"[OK] 已复制预览脚本到 {dest}")
 
 
 if __name__ == "__main__":
