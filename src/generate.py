@@ -5,10 +5,12 @@
         index.json              总索引（演员列表 + 各演员汇总 json 路径）
         index.html              预览页（ROOT 已由本脚本写入绝对路径）
         演员名称/
-            演员名称.json       该演员汇总：videos 数组
-            <番号>.mp4
-            covers/<番号>.jpg
-            images/<番号>_N.jpg
+            meta/
+                演员名称.json       该演员汇总：videos 数组
+                <视频名>/
+                    cover.jpg
+                    images/N.jpg
+            <视频名>.mp4
 
 用法:
     python src/generate.py --dir <视频根目录>
@@ -144,14 +146,15 @@ def scrape_actress(actor_dir: Path) -> dict | None:
                 print(f"  [ERROR] 解析不到数据（标题/封面缺失），跳过 {fanha}")
                 continue
 
-            cover_rel = f"meta/covers/{fanha}.jpg"
+            video_dir = mp4.stem
+            cover_rel = f"meta/{video_dir}/cover.jpg"
             if data["cover"]:
                 download(data["cover"], actor_dir / cover_rel)
             data["cover"] = cover_rel
 
             shot_rels = []
             for i, shot in enumerate(data["screenshots"], 1):
-                rel = f"meta/images/{fanha}_{i}.jpg"
+                rel = f"meta/{video_dir}/images/{i}.jpg"
                 if download(shot, actor_dir / rel):
                     shot_rels.append(rel)
             data["screenshots"] = shot_rels

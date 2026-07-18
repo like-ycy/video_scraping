@@ -83,6 +83,13 @@ function potplayerUrl(relPath) {
   return "potplayer://" + abs;
 }
 
+// 图片字段在 meta/<演员>.json 中以演员目录为基准存放，
+// 预览页面位于视频根目录，需拼上演员目录前缀才能正确加载。
+function imgUrl(rel) {
+  if (!rel) return "";
+  return currentActorDir ? currentActorDir + "/" + rel : rel;
+}
+
 async function loadIndex() {
   try {
     const r = await fetch("index.json");
@@ -127,7 +134,7 @@ function renderGrid(videos) {
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
-      <img src="${v.cover}" alt="${v.fanha} 封面" loading="lazy" onerror="this.style.visibility='hidden'">
+      <img src="${imgUrl(v.cover)}" alt="${v.fanha} 封面" loading="lazy" onerror="this.style.visibility='hidden'">
       <div class="meta">
         <div class="fanha">${v.fanha}</div>
         <div class="title">${v.title || ""}</div>
@@ -142,7 +149,7 @@ function openDetail(idx) {
   const v = current[idx];
   const inner = document.getElementById("overlayInner");
   const shots = (v.screenshots || []).map((s, i) =>
-    `<img src="${s}" alt="截图 ${i + 1}" loading="lazy" onclick="openLightbox(${idx}, ${i})" onerror="this.style.visibility='hidden'">`
+    `<img src="${imgUrl(s)}" alt="截图 ${i + 1}" loading="lazy" onclick="openLightbox(${idx}, ${i})" onerror="this.style.visibility='hidden'">`
   ).join("");
   const rel = currentActorDir ? currentActorDir + "/" + v.video_file : v.video_file;
   const playUrl = potplayerUrl(rel);
@@ -150,7 +157,7 @@ function openDetail(idx) {
     ? `<button type="button" class="play-btn" onclick="location.href='${playUrl}'">▶ 用 PotPlayer 播放</button>`
     : "";
   inner.innerHTML = `
-    <img class="cover" src="${v.cover}" alt="${v.fanha} 封面大图" onerror="this.style.visibility='hidden'">
+    <img class="cover" src="${imgUrl(v.cover)}" alt="${v.fanha} 封面大图" onerror="this.style.visibility='hidden'">
     <div class="detail-title">${v.title || v.fanha}</div>
     <div class="detail-row">番号：${v.fanha}</div>
     <div class="detail-row">发布时间：${v.release_date || "-"}</div>
@@ -174,7 +181,7 @@ function openLightbox(vIdx, sIdx) {
   document.getElementById("lightbox").classList.add("show");
 }
 function showLb() {
-  document.getElementById("lbImg").src = lbList[lbPos] || "";
+  document.getElementById("lbImg").src = imgUrl(lbList[lbPos] || "");
 }
 function lbMove(d) {
   lbPos = (lbPos + d + lbList.length) % lbList.length;
