@@ -14,7 +14,7 @@
   .tab { padding: 8px 16px; background: #2a2a34; border-radius: 20px; cursor: pointer; font-size: 14px; transition: .15s; }
   .tab:hover { background: #353541; }
   .tab.active { background: #d94f8a; color: #fff; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
   .card { background: #1f1f27; border-radius: 8px; overflow: hidden; cursor: pointer; transition: .15s; }
   .card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.4); }
   .card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #2a2a34; }
@@ -26,7 +26,14 @@
   .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 100; overflow-y: auto; }
   .overlay.show { display: block; }
   .overlay-inner { max-width: 900px; margin: 40px auto; padding: 0 20px; }
-  .overlay-close { position: fixed; top: 20px; right: 24px; font-size: 30px; cursor: pointer; color: #fff; }
+  .overlay-close {
+    position: fixed; top: 20px; right: 24px; z-index: 110;
+    width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; line-height: 1; cursor: pointer; color: #e8e8ea;
+    background: rgba(255,255,255,.12); border: none; border-radius: 50%;
+    transition: background .15s, transform .15s;
+  }
+  .overlay-close:hover { background: rgba(255,255,255,.28); transform: rotate(90deg); }
   .overlay img.cover { width: 100%; max-width: 500px; display: block; margin: 0 auto 16px; border-radius: 8px; }
   .detail-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
   .detail-row { font-size: 13px; color: #bbb; margin: 4px 0; }
@@ -37,10 +44,24 @@
   .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.95); z-index: 200; align-items: center; justify-content: center; }
   .lightbox.show { display: flex; }
   .lightbox img { max-width: 92vw; max-height: 92vh; }
-  .lightbox .nav { position: fixed; top: 50%; transform: translateY(-50%); font-size: 40px; color: #fff; cursor: pointer; user-select: none; padding: 20px; }
-  .lightbox .prev { left: 10px; }
-  .lightbox .next { right: 10px; }
-  .lightbox .lb-close { position: fixed; top: 20px; right: 24px; font-size: 30px; color: #fff; cursor: pointer; }
+  .lightbox .nav {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+    font-size: 26px; line-height: 1; color: #fff; cursor: pointer; user-select: none;
+    background: rgba(0,0,0,.45); border: none; border-radius: 50%;
+    transition: background .15s;
+  }
+  .lightbox .nav:hover { background: rgba(217,79,138,.85); }
+  .lightbox .prev { left: 16px; }
+  .lightbox .next { right: 16px; }
+  .lightbox .lb-close {
+    position: fixed; top: 20px; right: 24px; z-index: 210;
+    width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; line-height: 1; color: #e8e8ea; cursor: pointer;
+    background: rgba(255,255,255,.12); border: none; border-radius: 50%;
+    transition: background .15s, transform .15s;
+  }
+  .lightbox .lb-close:hover { background: rgba(255,255,255,.28); transform: rotate(90deg); }
 </style>
 </head>
 <body>
