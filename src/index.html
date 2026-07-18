@@ -111,7 +111,9 @@ function renderTabs() {
 async function selectActress(i) {
   document.querySelectorAll(".tab").forEach((t, j) => { t.classList.toggle("active", j === i); });
   const a = index.actresses[i];
-  currentActorDir = a.json.includes("/") ? a.json.split("/").slice(0, -1).join("/") : "";
+  // json 现位于 演员目录/meta/ 下，演员目录为去掉末两段（meta/文件名）
+  const parts = a.json.split("/");
+  currentActorDir = parts.length > 2 ? parts.slice(0, -2).join("/") : "";
   const r = await fetch(a.json);
   const data = await r.json();
   current = data.videos || [];

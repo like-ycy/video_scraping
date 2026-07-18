@@ -145,14 +145,14 @@ def scrape_actress(actor_dir: Path) -> dict | None:
                 print(f"  [ERROR] 解析不到数据（标题/封面缺失），跳过 {fanha}")
                 continue
 
-            cover_rel = f"covers/{fanha}.jpg"
+            cover_rel = f"meta/covers/{fanha}.jpg"
             if data["cover"]:
                 download(data["cover"], actor_dir / cover_rel)
             data["cover"] = cover_rel
 
             shot_rels = []
             for i, shot in enumerate(data["screenshots"], 1):
-                rel = f"images/{fanha}_{i}.jpg"
+                rel = f"meta/images/{fanha}_{i}.jpg"
                 if download(shot, actor_dir / rel):
                     shot_rels.append(rel)
             data["screenshots"] = shot_rels
@@ -165,12 +165,13 @@ def scrape_actress(actor_dir: Path) -> dict | None:
         return None
 
     summary = {"actress": actor_dir.name, "videos": videos}
-    out = actor_dir / f"{actor_dir.name}.json"
+    out = actor_dir / "meta" / f"{actor_dir.name}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[OK] 写入 {out} ({len(videos)} 个视频)")
     return {
         "name": actor_dir.name,
-        "json": f"{actor_dir.name}/{actor_dir.name}.json",
+        "json": f"{actor_dir.name}/meta/{actor_dir.name}.json",
         "video_count": len(videos),
     }
 
