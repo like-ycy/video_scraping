@@ -99,9 +99,10 @@ function fmtSize(bytes) {
 
 function potplayerUrl(absPath) {
   if (!absPath) return "";
-  // Windows 反斜杠转正斜杠。中文必须原样保留——PotPlayer 不解码
-  // %XX，若 encodeURI 会把"迅雷下载"变成字面 %E8... 导致文件找不到。
-  return "potplayer://" + absPath.replace(/\\/g, "/");
+  // 反斜杠转正斜杠，中文经 encodeURI 编码为 %XX。
+  // 经 location.href 赋值时浏览器会 decode 成中文再交给 PotPlayer，
+  // 与地址栏手输编码版成功跳转的行为一致。
+  return "potplayer://" + encodeURI(absPath.replace(/\\/g, "/"));
 }
 
 // 图片字段在 meta/<演员>.json 中以演员目录为基准存放，
@@ -194,14 +195,10 @@ function openDetail(idx) {
 }
 
 function launchPotPlayer(url) {
-  // 隐藏 iframe 注入 potplayer:// 是触发本地协议最稳的方式：
-  // 不经过 location.href 的 URL 规范校验，也不受 a[href] 的安全拦截。
-  // 中文与反斜杠原样保留，PotPlayer 才能识别本地路径。
-  const ifr = document.createElement("iframe");
-  ifr.style.display = "none";
-  ifr.src = url;
-  document.body.appendChild(ifr);
-  setTimeout(() => ifr.remove(), 2000);
+  // location.href 赋值会让浏览器对 %XX 做 URL decode 后再交给
+  // PotPlayer（与地址栏手输编码版成功跳转一致）。iframe 注入不会
+  // decode，导致 PotPlayer 收到字面 %E8... 而找不到文件。
+  window.location.href = url;
 }
 
 let lbList = [];
