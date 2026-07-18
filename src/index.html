@@ -172,7 +172,7 @@ function openDetail(idx) {
   ).join("");
   const playUrl = potplayerUrl(v.video_path);
   const playBtn = playUrl
-    ? `<a class="play-btn" id="playBtn" href="${playUrl}">▶ 用 PotPlayer 播放</a>`
+    ? `<button type="button" class="play-btn" id="playBtn">▶ 用 PotPlayer 播放</button>`
     : "";
   inner.innerHTML = `
     <img class="cover" src="${imgUrl(v.cover)}" alt="${v.fanha} 封面大图" onerror="this.style.visibility='hidden'">
@@ -187,6 +187,19 @@ function openDetail(idx) {
     ${playBtn}
     <div class="shots">${shots}</div>`;
   document.getElementById("overlay").classList.add("show");
+  const pb = document.getElementById("playBtn");
+  if (pb) pb.addEventListener("click", () => launchPotPlayer(playUrl));
+}
+
+function launchPotPlayer(url) {
+  // 隐藏 iframe 注入 potplayer:// 是触发本地协议最稳的方式：
+  // 不经过 location.href 的 URL 规范校验，也不受 a[href] 的安全拦截。
+  // 中文与反斜杠原样保留，PotPlayer 才能识别本地路径。
+  const ifr = document.createElement("iframe");
+  ifr.style.display = "none";
+  ifr.src = url;
+  document.body.appendChild(ifr);
+  setTimeout(() => ifr.remove(), 2000);
 }
 
 let lbList = [];
