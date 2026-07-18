@@ -130,7 +130,7 @@ def scrape_actress(actor_dir: Path) -> dict | None:
     videos = []
     with SB(uc=True, test=True, locale="en", headless=True) as sb:
         for mp4 in sorted(actor_dir.glob("*.mp4")):
-            fanha = mp4.stem
+            fanha = mp4.stem.lower().replace("-c", "")
             print(f"[INFO] 刮削 {actor_dir.name}/{fanha}")
 
             detail_url = search_detail_url(sb, fanha)
