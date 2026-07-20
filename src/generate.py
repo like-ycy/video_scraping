@@ -22,7 +22,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
 import httpx
 from bs4 import BeautifulSoup
 from seleniumbase import BaseCase, SB
@@ -116,11 +118,11 @@ def parse_detail(html: str, fanha: str) -> dict:
     }
 
 
-def download(url: str, dest: Path) -> bool:
+def download(client: httpx.Client, url: str, dest: Path) -> bool:
     if dest.exists():
         return True
     try:
-        resp = httpx.get(url, follow_redirects=True, timeout=30)
+        resp = client.get(url)
     except httpx.HTTPError as exc:
         print(f"  [WARN] 下载失败 {url}: {exc}")
         return False
@@ -132,44 +134,61 @@ def download(url: str, dest: Path) -> bool:
     return True
 
 
-def scrape_actress(actor_dir: Path) -> dict | None:
-    videos = []
+def process_video(mp4: Path, actor_dir: Path, client: httpx.Client) -> dict | None:
+    fanha = mp4.stem.lower().replace("-c", "")
+    print(f"[INFO] 刮削 {actor_dir.name}/{fanha}")
+
     with SB(uc=True, test=True, locale="en", headless=True) as sb:
-        for mp4 in sorted(actor_dir.glob("*.mp4")):
-            fanha = mp4.stem.lower().replace("-c", "")
-            print(f"[INFO] 刮削 {actor_dir.name}/{fanha}")
+        detail_url = search_detail_url(sb, fanha)
+        if not detail_url:
+            return None
+        html = fetch_html(sb, detail_url)
+        if not html:
+            return None
 
-            detail_url = search_detail_url(sb, fanha)
-            if not detail_url:
-                continue
-            html = fetch_html(sb, detail_url)
-            if not html:
-                continue
-            data = parse_detail(html, fanha)
+    data = parse_detail(html, fanha)
+    if not data["title"] or not data["cover"]:
+        print(f"  [ERROR] 解析不到数据（标题/封面缺失），跳过 {fanha}")
+        return None
 
-            if not data["title"] or not data["cover"]:
-                print(f"  [ERROR] 解析不到数据（标题/封面缺失），跳过 {fanha}")
-                continue
+    video_dir = mp4.stem
+    cover_rel = f"meta/{video_dir}/cover.jpg"
+    if not download(client, data["cover"], actor_dir / cover_rel):
+        return None
+    data["cover"] = cover_rel
 
-            video_dir = mp4.stem
-            cover_rel = f"meta/{video_dir}/cover.jpg"
-            if data["cover"]:
-                download(data["cover"], actor_dir / cover_rel)
-            data["cover"] = cover_rel
+    shot_rels = []
+    for i, shot in enumerate(data["screenshots"], 1):
+        rel = f"meta/{video_dir}/images/{i}.jpg"
+        if download(client, shot, actor_dir / rel):
+            shot_rels.append(rel)
+    data["screenshots"] = shot_rels
 
-            shot_rels = []
-            for i, shot in enumerate(data["screenshots"], 1):
-                rel = f"meta/{video_dir}/images/{i}.jpg"
-                if download(shot, actor_dir / rel):
-                    shot_rels.append(rel)
-            data["screenshots"] = shot_rels
+    data["video_file"] = mp4.name
+    # 播放用绝对路径，前端直接 potplayer:// + 该字段，避免 ROOT/目录拼接错误。
+    # PotPlayer 在 Windows 上需要反斜杠路径，故转回反斜杠。
+    data["video_path"] = str(mp4.resolve()).replace("/", "\\")
+    data["file_size"] = mp4.stat().st_size
+    return data
 
-            data["video_file"] = mp4.name
-            # 播放用绝对路径，前端直接 potplayer:// + 该字段，避免 ROOT/目录拼接错误。
-            # PotPlayer 在 Windows 上需要反斜杠路径，故转回反斜杠。
-            data["video_path"] = str(mp4.resolve()).replace("/", "\\")
-            data["file_size"] = mp4.stat().st_size
-            videos.append(data)
+
+def scrape_actress(actor_dir: Path, workers: int = 2) -> dict | None:
+    mp4s = sorted(actor_dir.glob("*.mp4"))
+    if not mp4s:
+        return None
+
+    if "-n" not in sys.argv:
+        sys.argv.append("-n")
+
+    with httpx.Client(follow_redirects=True, timeout=30) as client:
+        with ThreadPoolExecutor(max_workers=min(workers, len(mp4s))) as executor:
+            results = executor.map(
+                process_video,
+                mp4s,
+                [actor_dir] * len(mp4s),
+                [client] * len(mp4s),
+            )
+            videos = [result for result in results if result is not None]
 
     if not videos:
         return None
@@ -208,6 +227,14 @@ def main() -> int:
         required=True,
         help="视频根目录（必填）",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=2,
+        choices=range(1, 33),
+        metavar="N",
+        help="单个演员同时刮削的视频数（默认: 2，范围: 1-32）",
+    )
     args = parser.parse_args()
 
     videos_dir = Path(args.dir)
@@ -219,7 +246,7 @@ def main() -> int:
     for actor_dir in sorted(p for p in videos_dir.iterdir() if p.is_dir()):
         if not any(actor_dir.glob("*.mp4")):
             continue
-        entry = scrape_actress(actor_dir)
+        entry = scrape_actress(actor_dir, args.workers)
         if entry:
             index_entries.append(entry)
 
